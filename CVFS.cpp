@@ -1,43 +1,78 @@
+//////////////////////////////////////////////////////
+//
+//   Customized Virtual File System Application
+//
+/////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////////////////
+//
+// Predefined Header files
+//
+//////////////////////////////////////////////////////////////////
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
 #include<unistd.h>
 #include<iostream>
 
-#define MAXINODE 50
+
+//////////////////////////////////////////////////////////////////
+//
+// User defined Macros
+//
+//////////////////////////////////////////////////////////////////
+#define MAXINODE 50 // Maximum Files To Be Created 50
 
 #define READ 1
-#define WRITE 2
+#define WRITE 2 //  permission as 3 For Both Read & Write
 
-#define MAXFILESIZE 2048
+#define MAXFILESIZE 1024 // Maximum Size Of A File (1024 = 1kb)
 
-#define REGULAR 1
-#define SPECIAL 2
+#define REGULAR 1 // ie Regular File
+#define SPECIAL 2 // for future  ie .c, .py file
 
-#define START 0
+#define START 0  // File Offset(lseek)
 #define CURRENT 1
 #define END 2
 
+
+//////////////////////////////////////////////////////
+//
+//    SuperBlock Structure
+//
+/////////////////////////////////////////////////////
 typedef struct superblock
 {
     int TotalInodes;
     int FreeInodes;
 }SUPERBLOCK, *PSUPERBLOCK;
 
-typedef struct inode
-{
-    char FileName[50];
-    int InodeNumber;
-    int FileSize;
-    int FileActualSize;
-    int FileType;
-    char *Buffer;
-    int LinkCount;
-    int ReferenceCount;
-    int permission;
-    struct inode *next;
-}INODE, *PINODE, **PPINODE;
 
+//////////////////////////////////////////////////////
+//
+//     Inode Structure
+//
+/////////////////////////////////////////////////////
+typedef struct inode  //94 bytes gets allocated for this block
+{
+	char FileName[50];   // file name stored
+	int InodeNumber;
+	int FileSize;        // 1024 byte
+	int FileActualSize;  // This gets allocated when we write into the file
+	int FileType;
+	char *Buffer;       
+	int LinkCount;
+	int ReferenceCount;
+	int permission;
+	struct inode *next;  //  self referential structure
+}INODE,*PINODE,**PPINODE;
+
+
+//////////////////////////////////////////////////////
+//
+//    FileTable Structure
+//
+/////////////////////////////////////////////////////
 typedef struct filetable
 {
     int readoffset;
@@ -47,15 +82,33 @@ typedef struct filetable
     PINODE ptrinode;
 }FILETABLE, *PFILETABLE;
 
+
+//////////////////////////////////////////////////////
+//
+//    UFDT Structure
+//
+/////////////////////////////////////////////////////
 typedef struct ufdt
 {
     PFILETABLE ptrfiletable;
 }UFDT;
 
-UFDT UFDTArr[50];
-SUPERBLOCK SUPERBLOCKobj;
-PINODE head = NULL;
 
+UFDT UFDTArr[50];          // Created Array of structure
+SUPERBLOCK SUPERBLOCKobj;  // global variable
+PINODE head=NULL;          // global pointer 
+
+
+//////////////////////////////////////////////////////
+//
+//  Function Name   :  man
+//  Input           :  char *    
+//  Output          :  Display info
+//  Description     :  This function display description of all commands in CVFS.
+//  Author          :  Sujit Wandre
+//  Date            :  12/01/2025
+//
+/////////////////////////////////////////////////////
 void man(char *name)
 {
     if(name == NULL) 
@@ -129,6 +182,17 @@ void man(char *name)
     }
 }
 
+
+//////////////////////////////////////////////////////
+//
+//  Function Name   :  DisplayHelp
+//  Input           :  -----    
+//  Output          :  Display info
+//  Description     :  It Display all the commands used in this VFS.
+//  Author          :  Sujit Wandre
+//  Date            :  12/01/2025
+//
+/////////////////////////////////////////////////////
 void DisplayHelp()
 {
     printf("ls : To list out all files\n");
@@ -145,6 +209,17 @@ void DisplayHelp()
     printf("rm : To Delete the file\n");
 }
 
+
+//////////////////////////////////////////////////////
+//
+//  Function Name   :  GetFDFromName
+//  Input           :  char *    
+//  Output          :  Integer
+//  Description     :  To get file descriptor
+//  Author          :  Sujit Wandre
+//  Date            :  12/01/2025
+//
+/////////////////////////////////////////////////////
 int GetFDFromName(char *name)
 {
     int i = 0;
@@ -171,6 +246,17 @@ int GetFDFromName(char *name)
     }
 }
 
+
+//////////////////////////////////////////////////////
+//
+//  Function Name   :  Get_Inode
+//  Input           :  char *    
+//  Output          :  PINODE
+//  Description     :  Return Inode's address
+//  Author          :  Sujit Wandre
+//  Date            :  12/01/2025
+//
+/////////////////////////////////////////////////////
 PINODE Get_Inode(char *name)
 {
     PINODE temp = head;
@@ -192,6 +278,17 @@ PINODE Get_Inode(char *name)
     return temp;
 }
 
+
+//////////////////////////////////////////////////////
+//
+//  Function Name   :  CreateDILB
+//  Input           :  -----    
+//  Output          :  -----
+//  Description     :  It Creates The DILB When Program Starts
+//  Author          :  Sujit Wandre
+//  Date            :  12/01/2025
+//
+/////////////////////////////////////////////////////
 void CreateDILB()
 {
     int i = 1;
@@ -227,6 +324,17 @@ void CreateDILB()
     printf("DILB created successfully\n");
 }
 
+
+//////////////////////////////////////////////////////
+//
+//  Function Name   :  InitialiseSuperBlock
+//  Input           :  -----    
+//  Output          :  -----
+//  Description     :  It Initialize super block values
+//  Author          :  Sujit Wandre
+//  Date            :  12/01/2025
+//
+/////////////////////////////////////////////////////
 void InitialiseSuperBlock()
 {
     int i = 3;
@@ -241,6 +349,17 @@ void InitialiseSuperBlock()
     SUPERBLOCKobj.FreeInodes = MAXINODE;
 }
 
+
+//////////////////////////////////////////////////////
+//
+//  Function Name   :  CreateFile
+//  Input           :  char *, Integer
+//  Output          :  -----
+//  Description     :  Create New Files
+//  Author          :  Sujit Wandre
+//  Date            :  12/01/2025
+//
+/////////////////////////////////////////////////////
 int CreateFile(char *name, int permission)
 {
     int i = 0;
@@ -303,6 +422,17 @@ int CreateFile(char *name, int permission)
     return i;
 }
 
+
+//////////////////////////////////////////////////////
+//
+//  Function Name   :  rm_File
+//  Input           :  char *
+//  Output          :  -----
+//  Description     :  Delete Created Files
+//  Author          :  Sujit Wandre
+//  Date            :  12/01/2025
+//
+/////////////////////////////////////////////////////
 int rm_File(char *name)
 {
     int fd = 0;
@@ -326,6 +456,17 @@ int rm_File(char *name)
     (SUPERBLOCKobj.FreeInodes)++;
 }
 
+
+//////////////////////////////////////////////////////
+//
+//  Function Name   :  ReadFile
+//  Input           :  Integer, char *, Integer
+//  Output          :  Integer
+//  Description     :  Read Data From File
+//  Author          :  Sujit Wandre
+//  Date            :  12/01/20251
+//
+/////////////////////////////////////////////////////
 int ReadFile(int fd, char * arr, int isize)
 {
     int read_size = 0;
@@ -371,6 +512,17 @@ int ReadFile(int fd, char * arr, int isize)
     return isize;
 }
 
+
+//////////////////////////////////////////////////////
+//
+//  Function Name   :  WriteFile
+//  Input           :  Integer, char *, Integer
+//  Output          :  Integer
+//  Description     :  Write Data Into The File
+//  Author          :  Sujit Wandre
+//  Date            :  12/01/2025
+//
+/////////////////////////////////////////////////////
 int WriteFile(int fd, char *arr, int isize) 
 {
     if (((UFDTArr[fd].ptrfiletable->mode) != WRITE) && ((UFDTArr[fd].ptrfiletable->mode) != READ+WRITE))
@@ -402,6 +554,17 @@ int WriteFile(int fd, char *arr, int isize)
     return isize;
 }
 
+
+//////////////////////////////////////////////////////
+//
+//  Function Name   :  OpenFile
+//  Input           :  char *, Integer
+//  Output          :  Integer
+//  Description     :  Open An Existing File
+//  Author          :  Sujit Wandre
+//  Date            :  12/01/2025
+//
+/////////////////////////////////////////////////////
 int OpenFile(char *name, int mode)
 {
     int i = 0;
@@ -461,6 +624,17 @@ int OpenFile(char *name, int mode)
     return i;
 }
 
+
+//////////////////////////////////////////////////////
+//
+//  Function Name   :  CloseFileByName
+//  Input           :  integer
+//  Output          :  ------
+//  Description     :  Close Existing File By Its Name
+//  Author          :  Sujit Wandre
+//  Date            :  12/01/2025
+//
+/////////////////////////////////////////////////////
 void CloseFileByName(int fd) 
 {
     UFDTArr[fd].ptrfiletable->readoffset = 0;
@@ -468,6 +642,16 @@ void CloseFileByName(int fd)
     (UFDTArr[fd].ptrfiletable->ptrinode->ReferenceCount)--;
 }
 
+//////////////////////////////////////////////////////
+//
+//  Function Name   :  CloseFileByName
+//  Input           :  char *
+//  Output          :  Integer
+//  Description     :  Close Existing File By Its Name
+//  Author          :  Sujit Wandre
+//  Date            :  12/01/2025
+//
+/////////////////////////////////////////////////////
 int CloseFileByName(char *name) 
 {
     int i = 0;
@@ -485,6 +669,17 @@ int CloseFileByName(char *name)
     return 0;
 }
 
+
+//////////////////////////////////////////////////////
+//
+//  Function Name   :  CloseAllFile
+//  Input           :  ------
+//  Output          :  ------
+//  Description     :  Close All Existing Files
+//  Author          :  Sujit Wandre
+//  Date            :  12/01/2025
+//
+/////////////////////////////////////////////////////
 void CloseAllFile()
 {
     int i = 0;
@@ -501,6 +696,17 @@ void CloseAllFile()
     }
 }
 
+
+//////////////////////////////////////////////////////
+//
+//  Function Name   :  LseekFile
+//  Input           :  Integer, Integer, Integer
+//  Output          :  Integer
+//  Description     :  Modify the or resets the write and readoffsets to particular point is start current or end
+//  Author          :  Sujit Wandre
+//  Date            :  12/01/2025
+//
+/////////////////////////////////////////////////////
 int LseekFile(int fd, int size, int from)
 {
     if((fd < 0) || (from > 2)) 
@@ -600,6 +806,17 @@ int LseekFile(int fd, int size, int from)
     }
 }
 
+
+//////////////////////////////////////////////////////
+//
+//  Function Name   :  ls_file
+//  Input           :  ------
+//  Output          :  ------
+//  Description     :  List Out All Existing Files Name
+//  Author          :  Sujit Wandre
+//  Date            :  12/01/2025
+//
+/////////////////////////////////////////////////////
 void ls_file()
 {
     int i = 0;
@@ -624,6 +841,18 @@ void ls_file()
     printf("----------------------------------------------------------\n");
 }
 
+
+
+//////////////////////////////////////////////////////
+//
+//  Function Name   :  fstat_file
+//  Input           :  Integer
+//  Output          :  Integer
+//  Description     :  Display Statistical Information Of The File By Using File Descriptor
+//  Author          :  Sujit Wandre
+//  Date            :  12/01/2025
+//
+/////////////////////////////////////////////////////
 int fstat_file(int fd)
 {
     PINODE temp = head;
@@ -666,6 +895,17 @@ int fstat_file(int fd)
     return 0;
 }
 
+
+//////////////////////////////////////////////////////
+//
+//  Function Name   :  stat_file
+//  Input           :  char *
+//  Output          :  Integer
+//  Description     :  Display Statistical Information Of The File By Using File Name.
+//  Author          :  Sujit Wandre
+//  Date            :  12/01/2025
+//
+/////////////////////////////////////////////////////
 int stat_file(char *name)
 {
     PINODE temp = head;
@@ -715,6 +955,17 @@ int stat_file(char *name)
     return 0;
 }
 
+
+//////////////////////////////////////////////////////
+//
+//  Function Name   :  truncate_File
+//  Input           :  char *
+//  Output          :  Integer
+//  Description     :  Delete All Data From The File
+//  Author          :  Sujit Wandre
+//  Date            :  12/01/2025
+//
+/////////////////////////////////////////////////////
 int truncate_File(char *name)
 {
     int fd = GetFDFromName(name);
@@ -732,6 +983,13 @@ int truncate_File(char *name)
 }
 
 
+//////////////////////////////////////////////////////////
+//
+//  Function Name		: 	main
+//  Description 		: 	Entry Point Function
+//  Author              :  Sujit Wandre
+//  Date                :  12/01/2025
+/////////////////////////////////////////////////////
 int main()
 {
     char *ptr = NULL;
